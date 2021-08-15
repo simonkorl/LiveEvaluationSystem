@@ -53,7 +53,7 @@ public:
 	int AddStream(const AVCodecContext *c) //2
 	{
 		if (!c)return -1;
-		//b 添加视频流 
+		//b 添加视频流
 		AVStream *st = avformat_new_stream(ic, NULL);
 		if (!st)
 		{
@@ -84,11 +84,14 @@ public:
 		char *input_filename = NULL;
 		int ret = 0;
 		struct buffer_data_write bd = { 0 };
+		char err_buf[512];
+		char err_buf_size = 512;
 		/* fill opaque structure used by the AVIOContext write callback */
  		bd.ptr  = bd.buf = (uint8_t *)av_malloc(bd_buf_size);
 		if (!bd.buf) {
 			ret = AVERROR(ENOMEM);
-			Print2File(av_err2str(ret));
+			av_make_error_string(err_buf, err_buf_size, ret);
+			Print2File(err_buf);
 			Print2File(" !bd.buf ret = AVERROR(ENOMEM) ERR : "+std::to_string(ret));
 			return false;
 		}
@@ -108,13 +111,14 @@ public:
 			Print2File("!avio_out");
 			Print2File("ret = AVERROR(ENOMEM) ERR : "+std::to_string(ret));
 			return false;
-		} 
+		}
 		// 3. 分配AVFormatContext，并指定AVFormatContext.pb字段。必须在调用avformat_write_header()之前完成
 		const char *outPutName = "flv";
 		AVOutputFormat* outPutFormatPtr = av_guess_format(outPutName, outPutName, NULL);
 		ret = avformat_alloc_output_context2(&ic, outPutFormatPtr, NULL, NULL);
 		if(ret<0){
-			Print2File(av_err2str(ret));
+			av_make_error_string(err_buf, err_buf_size, ret);
+			Print2File(err_buf);
 			Print2File("Could not create output context ret: "+std::to_string(ret));
 			return false;
 		}
