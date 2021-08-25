@@ -24,7 +24,8 @@ extern "C"
 
 void SaveFrame(AVFrame *pFrame, int width, int height, int iStream, int iFrame) {
     FILE *pFile;
-    char path[128];
+    char path[256];
+    char root_path[128];
 
     // // Open file
     // sprintf(dir, "/Users/yuming/Movies/decode/%d", iStream);
@@ -35,12 +36,12 @@ void SaveFrame(AVFrame *pFrame, int width, int height, int iStream, int iFrame) 
     //     mkdir(dir, 0775);
     // }
 
-    sprintf(path, "/Users/yuming/Movies/decode/%d", iStream);
+    sprintf(root_path, "/Users/yuming/Movies/decode/%d", iStream);
     if (access(path, 0) == -1)
     {
         mkdir(path, 0775);
     }
-    sprintf(path, "%s/frame%d.ppm", path, iFrame);
+    sprintf(path, "%s/frame%d.ppm", root_path, iFrame);
 
     pFile=fopen(path, "wb");
     if(pFile==NULL)
@@ -61,7 +62,8 @@ void SaveFrame(Decoder *decoder) {
     FILE            *pFile;
     AVCodecContext  *ctx    = decoder->pVCodecCtx;
     AVFrame         *pFrame = decoder->pFrameRGB;
-    char path[128];
+    char path[256];
+    char root_path[128];
 
     if (access(decoder->path, 0) == -1)
     {
@@ -71,16 +73,16 @@ void SaveFrame(Decoder *decoder) {
         }
     }
 
-    sprintf(path, "%s/%d", decoder->path, decoder->iStream);
-    if (access(path, 0) == -1)
+    sprintf(root_path, "%s/%d", decoder->path, decoder->iStream);
+    if (access(root_path, 0) == -1)
     {
-        if (mkdir(path, 0775) < 0) {
-            fprintf(stderr, "mkdir: fail to create %s\n", path);
+        if (mkdir(root_path, 0775) < 0) {
+            fprintf(stderr, "mkdir: fail to create %s\n", root_path);
             return;
         }
     }
 
-    sprintf(path, "%s/frame%d.ppm", path, decoder->iFrame);
+    sprintf(path, "%s/frame%d.ppm", root_path, decoder->iFrame);
     pFile = fopen(path, "wb");
     if(pFile == NULL) {
         return;
