@@ -1,9 +1,33 @@
-#include <bounded_buffer.h>
+//! 1. When it receives the first packet with stream info, it setup the decoder and start the decoing thread
+//! 2. It receives data from a jitter buffer and then feed the decoder
+#ifndef P_DECODE_AUDIO_H
+#define P_DECODE_AUDIO_H
+#include "bounded_buffer.h"
+#include "p_sodtp_jitter.h"
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_video.h>
-#include <SDL2/SDL_render.h>
 #include <SDL2/SDL_rect.h>
+#include <SDL2/SDL_render.h>
+#include <SDL2/SDL_video.h>
+#include <cstdint>
 
+typedef struct AudioParams {
+  int freq;
+  int channels;
+  int64_t channel_layout;
+  enum AVSampleFormat fmt;
+  int frame_size;
+  int bytes_per_sec;
+} FF_AudioParams;
+
+class AudioPlayer {
+ public:
+  SodtpJitter jitter;
+  FF_AudioParams s_audio_param_src;
+  FF_AudioParams s_audio_param_tgt;
+  SwrContext *s_audio_swr_ctx;
+  uint8_t *s_resample_buf = NULL; // 重采样输出缓冲区
+  int s_resample_buf_len = 0;
+};
 int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t *audio_buf, int buf_size)
 {
     AVFrame *p_frame = av_frame_alloc();
@@ -60,7 +84,7 @@ int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t 
                 p_frame->channel_layout != s_audio_param_src.channel_layout ||
                 p_frame->sample_rate    != s_audio_param_src.freq)
             {
-                swr_free(&s_audio_swr_ctx);
+                
                 // 使用frame(源)和is->audio_tgt(目标)中的音频参数来设置is->swr_ctx
                 s_audio_swr_ctx = swr_alloc_set_opts(NULL,
                                                      s_audio_param_tgt.channel_layout, 
@@ -347,3 +371,5 @@ int open_audio_stream(AVFormatContext* p_fmt_ctx, AVCodecContext* p_codec_ctx, i
 
     return 0;
 }
+#endif // P_DECODE_AUDIO_H
+

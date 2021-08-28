@@ -7,10 +7,10 @@ extern "C"
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
 
-#include "SDL2/SDL.h"
+#include <SDL2/SDL.h>
 }
 
-#include <sodtp_block.h>
+#include "sodtp_block.h"
 
 class SodtpJitter;
 

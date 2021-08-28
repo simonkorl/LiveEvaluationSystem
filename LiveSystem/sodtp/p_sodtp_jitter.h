@@ -9,9 +9,9 @@
 #include <thread>
 #include <semaphore.h>
 
-#include <sodtp_util.h>
-#include <sodtp_block.h>
-#include <p_sodtp_decoder.h>
+#include "sodtp_util.h"
+#include "sodtp_block.h"
+#include "p_sodtp_decoder.h"
 
 
 
