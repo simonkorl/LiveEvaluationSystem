@@ -37,9 +37,9 @@ public:
 
 int SDLPlay::init(int w, int h) {
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
-        printf( "Could not initialize SDL - %s\n", SDL_GetError()); 
+        printf( "Could not initialize SDL - %s\n", SDL_GetError());
         return -1;
-    } 
+    }
     // SDL 2.0 supports multiple windows.
     screen_w = w;
     screen_h = h;
@@ -51,7 +51,7 @@ int SDLPlay::init(int w, int h) {
                               SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE
                               );
     if(!screen) {
-        printf("SDL: could not create window - exiting:%s\n", SDL_GetError());  
+        printf("SDL: could not create window - exiting:%s\n", SDL_GetError());
         return -1;
     }
 

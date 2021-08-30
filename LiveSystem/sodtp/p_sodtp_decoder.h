@@ -13,6 +13,7 @@ extern "C"
 #include "sodtp_block.h"
 
 class SodtpJitter;
+class AudioPlayer;
 
 
 class Decoder
@@ -49,6 +50,9 @@ public:
 
     // SDL_Rect                *pRect;
     SDL_Texture             *pTexture;
+
+  // For audio decoding
+  AudioPlayer *aplayer = NULL;
 
 public:
     Decoder() {

@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <thread>
 
-#include <p_sodtp_jitter.h>
-#include <p_dtp_client.h>
-#include <p_decode_video.h>
-#include <p_stream_worker.h>
-#include <p_sdl_play.h>
+#include "./sodtp/p_sodtp_jitter.h"
+#include "p_dtp_client.h"
+#include "./sodtp/p_decode_video.h"
+#include "./sodtp/p_stream_worker.h"
+#include "./sodtp/p_sdl_play.h"
 
 extern "C"
 {
@@ -18,7 +18,7 @@ extern "C"
 }
 
 #include <unistd.h> // 一段时间后中断程序alarm用
-#include <util_log.h>
+#include "./util/util_log.h"
 using namespace std;
 
 void network_working(struct ev_loop *loop, ev_timer *w, int revents) {

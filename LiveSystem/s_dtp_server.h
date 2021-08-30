@@ -228,13 +228,16 @@ static void sender_cb(EV_P_ ev_timer *w, int revents) {
 
                 // set the value of priority and deadline.
                 // key frame, priority = sid * 1024 + 10
+              if(item->header.stream_id == 1) {
+                priority = 0;
+              } else {
                 if (item->header.flag & HEADER_FLAG_KEY) {
-                    // Print2File("item->header.flag & HEADER_FLAG_KEY");
-                    priority = (item->header.stream_id << 10) + 10;
+                  // Print2File("item->header.flag & HEADER_FLAG_KEY");
+                  priority = (item->header.stream_id << 10) + 10;
+                } else {
+                  priority = (item->header.stream_id << 10) + 20;
                 }
-                else {
-                    priority = (item->header.stream_id << 10) + 20;
-                }
+              }
 
                 // for the first block, we set it with the highest priority and enough deadline.
                 // 如果拉流端I帧丢失 decoding: waiting for the key block of stream
@@ -244,7 +247,7 @@ static void sender_cb(EV_P_ ev_timer *w, int revents) {
                     deadline = 300000;//lhs改过的
                 }
                 else {
-                    deadline = 300;
+                    deadline = 500;
                 }
 
                 // tag the time stamp.

@@ -981,14 +981,14 @@ int video_viewer4(SodtpJitterPtr pJitter, SDLPlay *splay, const char *path) {
         return -1;
     }
     // Print2File("if (avcodec_open2(pVCodecCtx, pVCodec, NULL) < 0) {");
-    // Open Codec
+    // 2.3 Open Codec
     if (avcodec_open2(pVCodecCtx, pVCodec, NULL) < 0) {
         Print2File("Fail to open codec!");
         fprintf(stderr, "Fail to open codec!\n");
         return -1;
     }
     // Print2File("pFrame = av_frame_alloc();");
-    // Allocate video frame
+    // 2.4 Allocate video frame
     pFrame = av_frame_alloc();
     // Allocate an AVFrame structure
     // Print2File("pFrameYUV = av_frame_alloc();");

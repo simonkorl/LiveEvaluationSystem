@@ -13,7 +13,7 @@ FFMPEG_INC = $(FFMPEG_ROOT)/include
 FFMPEG_SHARED = $(FFMPEG_ROOT)/shared
 FFMPEG_BIN = $(FFMPEG_ROOT)/bin
 
-CXFLAGS = -std=c++11 # -g
+CXFLAGS = -std=c++11 -fpermissive # -g #fpermissive enable enum and int conversion
 OPENCVFLAGS = `pkg-config --cflags --libs opencv`
 
 INCS = -I$(CURDIR) -I$(CURDIR)/sodtp -I$(CURDIR)/util -I$(DTP_INC) -I$(FFMPEG_INC)
@@ -41,13 +41,13 @@ r_dtp_server : s_dtp_server.cxx
 	$(CX) $(CXFLAGS)  -o $@ $^ $(INCS) $(LIBS) $(OPENCVFLAGS)
 
 r_dtp_play : p_dtp_play.cxx libsodtp.so
-	$(CX) $(CXFLAGS) -o $@ $^ $(INCS) $(LIBS) -lsodtp
+	$(CX) $(CXFLAGS) -o $@ p_dtp_play.cxx $(INCS) $(LIBS) -lsodtp
 
 # ================= udp =================
 r_udp_server : s_udp_server.cxx
 	$(CX) $(CXFLAGS)  -o $@ $^ $(INCS) $(LIBS) $(OPENCVFLAGS)
 
-r_udp_play : p_udp_play.cxx libsodtp.so
+r_udp_play : p_udp_play.cxx libsodtp.a
 	$(CX) $(CXFLAGS) -o $@ $^ $(INCS) $(LIBS) -lsodtp
 
 # ================= quiche =================
@@ -57,7 +57,7 @@ r_udp_play : p_udp_play.cxx libsodtp.so
 # r_quiche_play : p_quiche_play.cxx p_sodtp_jitter.cxx sodtp_block.cxx
 # 	$(CX) $(CXFLAGS) -o $@ $^ $(INCS) $(LIBS)
 
-libsodtp.so: sodtp/sodtp_block.cxx sodtp/p_sodtp_jitter.cxx
+libsodtp.so: sodtp/sodtp_block.cxx sodtp/p_sodtp_jitter.cxx sodtp/p_decode_audio.cxx
 	$(CX) $(CXFLAGS) -fPIC -shared -o $@ $^ $(INCS) $(LIBS)
 
 libquiche.so:

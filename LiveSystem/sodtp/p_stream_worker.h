@@ -3,8 +3,11 @@
 
 #include <vector>
 #include <thread>
-#include <p_sdl_play.h>
-#include <util_log.h>
+#include "p_sodtp_jitter.h"
+#include "p_sdl_play.h"
+#include "p_decode_video.h"
+#include "../util/util_log.h"
+#include "p_decode_audio.h"
 
 using namespace std;
 
@@ -17,6 +20,7 @@ public:
   JitterBuffer        jbuffer; // 用于缓存所有的数据块
 
   SDLPlay             splay; // 处理视频帧的更新与播放
+  AudioPlayer         *aplayer; // 处理音频播放的对象指针，所有权为 main()
   SDL_Rect            rect;
 
   vector<thread*>     thds;
@@ -44,13 +48,30 @@ void stream_working(struct ev_loop *loop, ev_signal *w, int revents) {
     while (it != worker->jbuffer.jptrs.end()) {
         if (((*it)->state & SodtpJitter::STATE_INIT) == SodtpJitter::STATE_INIT &&
             (*it)->get_work_thread() == NULL) {
+          // WARNING: temporary implementation
+          // Assume all video streams is stream_id == 0
+          // and assume all audio streams is stream_id == 1
+          if((*it)->stream_id == 0) {
+            // if it is a video stream, start video viewer
             Print2FileInfo("(p)启动video_viewer4线程处");
-            timeMainPlayer.evalTime("p","video_viewer4Start");
-            printf("[WARNING] new thread!!!!!\n");
-            thread *pthd = new thread(video_viewer4, *it, &worker->splay, worker->path);
+            timeMainPlayer.evalTime("p", "video_viewer4Start");
+            fprintf(stderr, "[WARNING] new video thread!!!!!\n");
+            thread *pthd =
+                new thread(video_viewer4, *it, &worker->splay, worker->path);
             (*it)->set_work_thread(pthd);
             worker->thds.push_back(pthd);
             found = true;
+          } else if((*it)->stream_id == 1) {
+            // if it is an audio stream, start audio viewer
+            Print2FileInfo("(p)启动audio_viewer线程处");
+            timeMainPlayer.evalTime("p", "audio_viewer Start");
+            fprintf(stderr, "[WARNING] new audio thread!!!!!\n");
+            thread *pthd =
+                new thread(audio_viewer, *it, worker->aplayer);
+            (*it)->set_work_thread(pthd);
+            worker->thds.push_back(pthd);
+            found = true;
+          }
         }
         // We DO NOT kill thread.
         // Thread should be stopped by itself due to the 'FIN' flag in block.

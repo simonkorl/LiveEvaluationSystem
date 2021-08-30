@@ -160,7 +160,9 @@ public:
     // flag in block for the stream will notify the thread to stop.
     sem_t                           *sem;
 
-    void push_back(SodtpStreamHeader *head, SodtpBlockPtr block);
+  // Push the block into the jitter that is defined by head->stream_id
+  // Blocks with the same stream_id will be pushed into the same jitter
+  void push_back(SodtpStreamHeader *head, SodtpBlockPtr block);
 
     // It can only be called after the thread of jptrs[i] is stopped.
     void erase(int i);
