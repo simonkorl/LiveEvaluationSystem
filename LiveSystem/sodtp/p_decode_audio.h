@@ -5,6 +5,7 @@
 
 #include <assert.h>
 #include <cstdint>
+#include <cstdio>
 
 extern "C"{
 #include <SDL2/SDL.h>
@@ -21,6 +22,7 @@ extern "C"{
 #include "p_sodtp_jitter.h"
 #include "../util/util_log.h"
 #include "./p_decode_video.h"
+#include <thread>
 
 #define SDL_USEREVENT_REFRESH (SDL_USEREVENT + 1)
 
@@ -28,12 +30,12 @@ extern "C"{
 #define MAX_AUDIO_FRAME_SIZE  192000
 
 typedef struct packet_queue_t {
-  AVPacketList *first_pkt;
-  AVPacketList *last_pkt;
+  AVPacketList *first_pkt = NULL;
+  AVPacketList *last_pkt = NULL;
   int           nb_packets;     // 队列中AVPacket的个数
   int           size;           // 队列中AVPacket总的大小(字节数)
-  SDL_mutex    *mutex;
-  SDL_cond     *cond;
+  SDL_mutex    *mutex = NULL;
+  SDL_cond     *cond = NULL;
 } packet_queue_t;
 
 void packet_queue_init(packet_queue_t *q)
@@ -55,7 +57,7 @@ int packet_queue_push(packet_queue_t *q, AVPacket *pkt)
 
     if ((pkt != NULL) && (pkt->data != NULL) && (av_packet_make_refcounted(pkt) < 0))
     {
-        printf("[pkt] is not refrence counted\n");
+      fprintf(stderr, "[pkt] is not refrence counted\n");
         return -1;
     }
 
@@ -68,6 +70,7 @@ int packet_queue_push(packet_queue_t *q, AVPacket *pkt)
     pkt_list->pkt  = *pkt;
     pkt_list->next = NULL;
 
+    fprintf(stderr, "before mutex lock in push\n");
     SDL_LockMutex(q->mutex);
 
     if (!q->last_pkt)           // 队列为空
@@ -82,20 +85,22 @@ int packet_queue_push(packet_queue_t *q, AVPacket *pkt)
     q->nb_packets++;
     q->size     += pkt_list->pkt.size;
     // 发个条件变量的信号：重启等待q->cond条件变量的一个线程
+    fprintf(stderr, "before signal\n");
     SDL_CondSignal(q->cond);
 
     SDL_UnlockMutex(q->mutex);
+    fprintf(stderr, "after unlock\n");
     return 0;
 }
 
 // 读队列头部。
 int packet_queue_pop(packet_queue_t *q, AVPacket *pkt, int block) {
-    AVPacketList                                 *p_pkt_node;
-    int ret;
+  AVPacketList                                 *p_pkt_node;
+  int ret;
+  fprintf(stderr, "before pop mutex\n");
+  SDL_LockMutex(q->mutex);
 
-    SDL_LockMutex(q->mutex);
-
-    while (1)
+  while (1)
       {
       p_pkt_node = q->first_pkt;
         if (p_pkt_node)         // 队列非空，取一个出来
@@ -119,7 +124,8 @@ int packet_queue_pop(packet_queue_t *q, AVPacket *pkt, int block) {
         }
         else                    // 队列空且阻塞标志有效，则等待
         {
-            SDL_CondWait(q->cond, q->mutex);
+          fprintf(stderr, "waitting signal\n");
+          SDL_CondWait(q->cond, q->mutex);
         }
     }
     SDL_UnlockMutex(q->mutex);
@@ -131,6 +137,7 @@ int packet_queue_front(packet_queue_t *q, AVPacket *pkt, bool block) {
   AVPacketList                        *p_pkt_node;
   int                                  ret = 0;
 
+  fprintf(stderr, "before front mutex\n");
   SDL_LockMutex(q->mutex);
 
   p_pkt_node = q->first_pkt;
@@ -151,12 +158,12 @@ int packet_queue_front(packet_queue_t *q, AVPacket *pkt, bool block) {
 }
 
 typedef struct AudioParams {
-  int freq;
+  int                 freq;
   int                 channels;
   int64_t             channel_layout;
   enum AVSampleFormat fmt;
   int                 frame_size;
-  int bytes_per_sec;
+  int                 bytes_per_sec;
 } FF_AudioParams;
 
 class AudioPlayer {
@@ -183,7 +190,7 @@ int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet,
 
 void sdl_audio_callback(void *userdata, uint8_t *stream, int len);
 
-void read_data_from_jitter(EV_P_ ev_timer *w, int revents);
+void read_data_from_jitter(Decoder* decoder);
 
 int open_audio_stream(CodecParWithoutExtraData *myCodecPar,
                       AudioPlayer *aplayer);

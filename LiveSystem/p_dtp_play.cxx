@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
     logSysPrepare(path);
 
     SaveConfig scon;
-    scon.parse("./config/save.conf");    
+    scon.parse("./config/save.conf");
     if (!path) {
         path = scon.path.c_str();
     }
@@ -143,7 +143,8 @@ int main(int argc, char *argv[]) {
     // SDL_Texture texture;
 
 
-
+    AudioPlayer aplayer;
+    sworker.aplayer = &aplayer;
 
 
     struct ev_loop *loop = ev_default_loop(0);
@@ -158,7 +159,7 @@ int main(int argc, char *argv[]) {
     ev_timer player;
     Print2FileInfo("(p)启动sdl_play线程处");
     double frameRate = 0.010;
-    double interval = 0.040; 
+    double interval = 0.040;
     ev_timer_init(&player, sdl_play, 0, frameRate);
     ev_timer_start(loop, &player);
     player.data = &sworker;
@@ -202,19 +203,3 @@ int main(int argc, char *argv[]) {
     printf("main thread exit now\n");
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

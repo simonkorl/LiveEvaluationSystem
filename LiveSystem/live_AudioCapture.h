@@ -7,10 +7,14 @@
 #include "util/util_log.h"
 #include "live_xData.h"
 #include "live_xDataThread.h"
+#include "mc_utils.h"
 
 #define DEVICE_FORMAT           ma_format_f32
 #define DEVICE_CHANNELS         2
 #define DEVICE_SAMPLE_RATE      44100
+#define DEVICE_FMT_SIZE         8
+
+
 void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
   ma_encoder* pEncoder = (ma_encoder*)pDevice->pUserData;
@@ -41,6 +45,7 @@ class AudioCapture: public XDataThread {
 public:
   AudioCapture(){};
   ~AudioCapture(){};
+
   static void data_callback_capture(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
     AudioCapture* pAudioCapture = (AudioCapture*)pDevice->pUserData;
     MA_ASSERT(pAudioCapture != NULL);
@@ -48,6 +53,7 @@ public:
     if(pAudioCapture->isExited()) return;
 
     int frameSize = ma_get_bytes_per_frame(pDevice->capture.format, pDevice->capture.channels);
+
     // printf("frameCount: %d, frameSize: %d, pointer: %p\n", frameCount, frameSize, pInput);
     for(int i = 0;i < frameCount; ++i) {
       pAudioCapture->Push(XData(((char *)pInput + i * frameSize), frameSize, GetCurTime()));
@@ -77,7 +83,7 @@ public:
       return false;
     }
 
-    this->maxList = 256;
+    this->maxList = 2048;
     return true;
   }
   bool start() {

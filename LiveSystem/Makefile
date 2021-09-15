@@ -24,7 +24,7 @@ LIBS = -L$(CURDIR) -L$(FFMPEG_LIB) -L$(FFMPEG_SHARED) -lswscale -lswresample -la
 		-L$(DTP_LIB) -lquiche \
 		-lm -lz -lev -ldl -pthread \
 
-TARGETS = r_dtp_server r_dtp_play r_udp_server r_udp_play
+TARGETS = r_dtp_server r_dtp_play # r_udp_server r_udp_play
 # r_quiche_server r_quiche_play
 # 先放着只为实验图的"实验"
 
@@ -103,4 +103,3 @@ ru: r_udp_server r_udp_play libsodtp.so
 
 k:
 	../command/lhs_killBoth.sh
-

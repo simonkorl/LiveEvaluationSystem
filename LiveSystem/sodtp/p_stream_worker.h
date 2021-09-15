@@ -20,7 +20,7 @@ public:
   JitterBuffer        jbuffer; // 用于缓存所有的数据块
 
   SDLPlay             splay; // 处理视频帧的更新与播放
-  AudioPlayer         *aplayer; // 处理音频播放的对象指针，所有权为 main()
+  AudioPlayer         *aplayer = NULL; // 处理音频播放的对象指针，所有权为 main()
   SDL_Rect            rect;
 
   vector<thread*>     thds;
@@ -33,9 +33,10 @@ public:
 
 // Check the state of jitter buffer and network.
 // And then take actions according to the state.
+// This function creates thread to play video and audio stream
 void stream_working(struct ev_loop *loop, ev_signal *w, int revents) {
     timeMainPlayer.evalTime("p","stream_working_Started");
-    StreamWorker *worker = (StreamWorker*)w->data;
+    StreamWorker *worker = (StreamWorker*)w->data; // owner main()
 
     bool found = false;
     printf("a new signal.\n");
@@ -44,11 +45,11 @@ void stream_working(struct ev_loop *loop, ev_signal *w, int revents) {
     // lock the jptrs.
     scoped_lock lock(worker->jbuffer.mtx);
     auto it = worker->jbuffer.jptrs.begin();
-    printf("searching signal source, jitter queue number %lu\n", worker->jbuffer.jptrs.size());
+    fprintf(stderr, "searching signal source, jitter queue number %lu\n", worker->jbuffer.jptrs.size());
     while (it != worker->jbuffer.jptrs.end()) {
         if (((*it)->state & SodtpJitter::STATE_INIT) == SodtpJitter::STATE_INIT &&
             (*it)->get_work_thread() == NULL) {
-          // WARNING: temporary implementation
+          // TODO: WARNING: temporary implementation
           // Assume all video streams is stream_id == 0
           // and assume all audio streams is stream_id == 1
           if((*it)->stream_id == 0) {
@@ -66,6 +67,7 @@ void stream_working(struct ev_loop *loop, ev_signal *w, int revents) {
             Print2FileInfo("(p)启动audio_viewer线程处");
             timeMainPlayer.evalTime("p", "audio_viewer Start");
             fprintf(stderr, "[WARNING] new audio thread!!!!!\n");
+            fprintf(stderr, "[INFO]worker->aplayer: %p\n", worker->aplayer);
             thread *pthd =
                 new thread(audio_viewer, *it, worker->aplayer);
             (*it)->set_work_thread(pthd);
@@ -93,7 +95,7 @@ void stream_working(struct ev_loop *loop, ev_signal *w, int revents) {
 
         // stop playing.
         // ev_signal_stop(loop, w);
-        // 
+        //
         // ev_break (EV_A_ EVBREAK_ALL);
         ev_break(EV_A_ EVBREAK_ONE);
     }
@@ -102,7 +104,7 @@ void stream_working(struct ev_loop *loop, ev_signal *w, int revents) {
         printf("Warning! No Stream left, exit now.\n");
         // stop playing.
         // ev_signal_stop(loop, w);
-        // 
+        //
         // ev_break (EV_A_ EVBREAK_ALL);
         ev_break(EV_A_ EVBREAK_ONE);
     }

@@ -6,18 +6,21 @@
 #include "live_AudioCapture.h"
 #include "live_xData.h"
 #include <cassert>
+#include <cstdint>
 
+#include "mc_utils.h"
 /**
    Read video frame from LiveCapture and send them to multiple targets
-   described in vStmCtx. All the targets receives the same video frame each round
+   described in vStmCtx. All the targets receives the same video frame each
+   round
 
-   @param: vStmCtx, ptrs of StreamContexts. It stores information of each stream indexed by stream_id
- */
-bool liveConsumeThreadFull(LiveCapture *lc,
-                           MediaEncoder *xe,
-                           XTransport *xt,
-                           std::vector<StreamCtxPtr> *vStmCtx,
-                           BoundedBuffer<StreamPktVecPtr> *pBuffer){
+   @param: vStmCtx, ptrs of StreamContexts. It stores information of each
+   stream indexed by stream_id
+*/
+bool
+liveConsumeThreadFull(LiveCapture *lc, MediaEncoder *xe, XTransport *xt,
+                      std::vector<StreamCtxPtr> *vStmCtx,
+                      BoundedBuffer<StreamPktVecPtr> *pBuffer) {
   // camera 直播输入源
   int             i           = 0; // packet index
   int             ret         = 0;
@@ -129,7 +132,7 @@ bool liveConsumeThreadFull(LiveCapture *lc,
 
         // write a vec pointer of packet ptrs into the buffer, and get a stale vec pointer.
         // 特别注意 block_id 多流改位置！
-        block_id += 2;
+        block_id ++;
         pStmPktVec = pBuffer->produce(pStmPktVec);
         pStmPktVec = NULL;
         if (vStmCtx->empty()) {
@@ -278,22 +281,50 @@ bool audioConsumeThread(AudioCapture *ac,
                         BoundedBuffer<StreamPktVecPtr> *pBuffer){
   int ret = 0;
   int stream_num = 0;
-  int block_id = 1;
+  int block_id = 0;
   StreamPktVecPtr pStmPktVec = NULL;
   long long beginTime = GetCurTime();
+  uint8_t *ac_frames = new uint8_t[xe->nbSampleIn * DEVICE_FMT_SIZE];
+  int nb_ac_frames = 0;
+  long long frame_pts = 0;
   while(true) {
-    XData audio_frame = ac->Pop();
-    if(audio_frame.size <= 0){
-      msleep(1);
-      continue;
-    } else {
-      // handle audio
-      audio_frame.pts -= beginTime;
-      XData rsmpl_audio_frame = xe->Resample(audio_frame);
-      audio_frame.Drop();
-      timeFrameServer.evalTime("Resample", "s");
-      XData packet = xe->EncodeAudio(rsmpl_audio_frame);
-      if(packet.size > 0) {
+    // accumulate ac frames until xe->nbSampleIn
+    eprintf("accumulating audio frames\n");
+    nb_ac_frames = 0;
+    while (nb_ac_frames < xe->nbSampleIn) {
+      XData audio_frame = ac->Pop();
+
+      if (audio_frame.size <= 0) {
+        msleep(1);
+        continue;
+      } else {
+        // fill the buffer with data
+        assert(DEVICE_FMT_SIZE == audio_frame.size);
+        memcpy(ac_frames + nb_ac_frames * DEVICE_FMT_SIZE, audio_frame.data, audio_frame.size);
+        frame_pts = audio_frame.pts;
+        nb_ac_frames++;
+        audio_frame.Drop();
+      }
+    }
+    assert(nb_ac_frames == xe->nbSampleIn);
+    // handle audio
+    frame_pts -= beginTime;
+    XData audio_samples((char *)ac_frames, xe->nbSampleIn * DEVICE_FMT_SIZE, frame_pts);
+    eprintf("audio samples size: %d\n", audio_samples.size);
+    eprintf("peek audio samples: [");
+    for(int i = 0;i < 10; ++i) {
+      eprintf("%d, %d", *((int *)(audio_samples.data + i * 8)),
+              *((int *)(audio_samples.data + i * 8 + 4)));
+    }
+    eprintf("]");
+    XData rsmpl_audio_frame = xe->Resample(audio_samples);
+    eprintf("rsmple audio frame size: %d\n", rsmpl_audio_frame.size);
+    audio_samples.Drop();
+    timeFrameServer.evalTime("Resample", "s");
+    XData packet = xe->EncodeAudio(rsmpl_audio_frame);
+    eprintf("audio packet size: %d\n", packet.size);
+    /* audio_frame.Drop(); */
+    if(packet.size > 0) {
         timeFrameServer.evalTimeStamp("AudioEncode", "s", "FrameTime");
         if(!packet.data) {
           Print2File("!pkt.data");
@@ -369,7 +400,7 @@ bool audioConsumeThread(AudioCapture *ac,
             it++;
           }
         }
-        block_id += 2;
+        block_id ++;
         pStmPktVec = pBuffer->produce(pStmPktVec);
         pStmPktVec = NULL;
         if(vStmCtx->empty()) {
@@ -377,8 +408,11 @@ bool audioConsumeThread(AudioCapture *ac,
           break;
         }
       }
+    else {
+      fprintf(stderr, "audio packet size is 0\n");
     }
   }
+  delete[] ac_frames;
   return true;
 }
 
@@ -395,6 +429,10 @@ bool prepareAudio(AudioCapture *ac, MediaEncoder *xe, XTransport *xt) {
   // 音频编码类
   // 2. 初始化上下文
   // Default Setting
+  xe->nbSampleIn = 44100;
+  xe->inSampleFmt = X_FMT_S32;
+  xe->nbSampleIn = 1024;
+  xe->channels = 2;
 
   if(!xe->InitResample()) {
     Print2File("2. 初始化重采样：失败！！");
