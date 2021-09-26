@@ -305,7 +305,6 @@ public:
 			p->pts += 1200;
 		}
 		lasta = p->pts;
-    fprintf(stderr, "[DEBUG] p in encode audio: %p", p);
     eprintf("p->pts: %ld, p->nb_samples: %d, p->sample_rate: %d", p->pts, p->nb_samples, p->sample_rate);
 		//pts 运算
 		//nb_sample/sample_rate = 一帧音频的秒数sec

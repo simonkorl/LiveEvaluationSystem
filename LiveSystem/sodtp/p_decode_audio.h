@@ -57,7 +57,6 @@ int packet_queue_push(packet_queue_t *q, AVPacket *pkt)
 
     if ((pkt != NULL) && (pkt->data != NULL) && (av_packet_make_refcounted(pkt) < 0))
     {
-      fprintf(stderr, "[pkt] is not refrence counted\n");
         return -1;
     }
 
@@ -70,7 +69,6 @@ int packet_queue_push(packet_queue_t *q, AVPacket *pkt)
     pkt_list->pkt  = *pkt;
     pkt_list->next = NULL;
 
-    fprintf(stderr, "before mutex lock in push\n");
     SDL_LockMutex(q->mutex);
 
     if (!q->last_pkt)           // 队列为空
@@ -85,11 +83,9 @@ int packet_queue_push(packet_queue_t *q, AVPacket *pkt)
     q->nb_packets++;
     q->size     += pkt_list->pkt.size;
     // 发个条件变量的信号：重启等待q->cond条件变量的一个线程
-    fprintf(stderr, "before signal\n");
     SDL_CondSignal(q->cond);
 
     SDL_UnlockMutex(q->mutex);
-    fprintf(stderr, "after unlock\n");
     return 0;
 }
 
@@ -97,7 +93,6 @@ int packet_queue_push(packet_queue_t *q, AVPacket *pkt)
 int packet_queue_pop(packet_queue_t *q, AVPacket *pkt, int block) {
   AVPacketList                                 *p_pkt_node;
   int ret;
-  fprintf(stderr, "before pop mutex\n");
   SDL_LockMutex(q->mutex);
 
   while (1)
@@ -124,7 +119,6 @@ int packet_queue_pop(packet_queue_t *q, AVPacket *pkt, int block) {
         }
         else                    // 队列空且阻塞标志有效，则等待
         {
-          fprintf(stderr, "waitting signal\n");
           SDL_CondWait(q->cond, q->mutex);
         }
     }
@@ -137,7 +131,6 @@ int packet_queue_front(packet_queue_t *q, AVPacket *pkt, bool block) {
   AVPacketList                        *p_pkt_node;
   int                                  ret = 0;
 
-  fprintf(stderr, "before front mutex\n");
   SDL_LockMutex(q->mutex);
 
   p_pkt_node = q->first_pkt;

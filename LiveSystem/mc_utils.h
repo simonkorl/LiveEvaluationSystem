@@ -1,7 +1,7 @@
 #ifndef MC_UTILS_H
 #define MC_UTILS_H
 // debug functions
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #define eprintf(format, args...)                                               \
   {                                                                            \

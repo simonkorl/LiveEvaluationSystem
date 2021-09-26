@@ -289,7 +289,6 @@ bool audioConsumeThread(AudioCapture *ac,
   long long frame_pts = 0;
   while(true) {
     // accumulate ac frames until xe->nbSampleIn
-    eprintf("accumulating audio frames\n");
     nb_ac_frames = 0;
     while (nb_ac_frames < xe->nbSampleIn) {
       XData audio_frame = ac->Pop();
@@ -310,19 +309,10 @@ bool audioConsumeThread(AudioCapture *ac,
     // handle audio
     frame_pts -= beginTime;
     XData audio_samples((char *)ac_frames, xe->nbSampleIn * DEVICE_FMT_SIZE, frame_pts);
-    eprintf("audio samples size: %d\n", audio_samples.size);
-    eprintf("peek audio samples: [");
-    for(int i = 0;i < 10; ++i) {
-      eprintf("%d, %d", *((int *)(audio_samples.data + i * 8)),
-              *((int *)(audio_samples.data + i * 8 + 4)));
-    }
-    eprintf("]");
     XData rsmpl_audio_frame = xe->Resample(audio_samples);
-    eprintf("rsmple audio frame size: %d\n", rsmpl_audio_frame.size);
     audio_samples.Drop();
     timeFrameServer.evalTime("Resample", "s");
     XData packet = xe->EncodeAudio(rsmpl_audio_frame);
-    eprintf("audio packet size: %d\n", packet.size);
     /* audio_frame.Drop(); */
     if(packet.size > 0) {
         timeFrameServer.evalTimeStamp("AudioEncode", "s", "FrameTime");
@@ -348,8 +338,10 @@ bool audioConsumeThread(AudioCapture *ac,
           ret = 1;
           AVPacket *pack = (AVPacket *) packet.data;
           av_packet_ref(&(*pStmPktVec)[i]->packet, pack);
+          AVPacket *vPack = &(*pStmPktVec)[i]->packet;
           int streamIndex = 1; // Suppose audio stream is stream 1
           pack->stream_index = streamIndex;
+          vPack->stream_index = streamIndex;
           AVRational stime;
           AVRational dtime;
 
@@ -364,9 +356,11 @@ bool audioConsumeThread(AudioCapture *ac,
           pack->pts = av_rescale_q(pack->pts, stime, dtime);
           pack->dts = av_rescale_q(pack->dts, stime, dtime);
           pack->duration = av_rescale_q(pack->duration, stime, dtime);
+          vPack->pts = pack->pts;
+          vPack->dts = pack->dts;
+          vPack->duration = pack->duration;
           (*pStmPktVec)[i]->header.duration = (*pStmPktVec)[i]->packet.duration * 1000;
           (*pStmPktVec)[i]->header.duration *= (*it)->pFmtCtx->streams[0]->time_base.num;
-
           if(ret < 0) {
             (*pStmPktVec)[i]->header.flag = HEADER_FLAG_FIN; // end of stream
             assert(false); // live stream ends nowhere
@@ -430,7 +424,7 @@ bool prepareAudio(AudioCapture *ac, MediaEncoder *xe, XTransport *xt) {
   // 2. 初始化上下文
   // Default Setting
   xe->nbSampleIn = 44100;
-  xe->inSampleFmt = X_FMT_S32;
+  xe->inSampleFmt = X_FMT_FLT;
   xe->nbSampleIn = 1024;
   xe->channels = 2;
 

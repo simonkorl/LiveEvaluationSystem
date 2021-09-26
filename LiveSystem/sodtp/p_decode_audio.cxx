@@ -2,6 +2,7 @@
 #include "p_sodtp_jitter.h"
 #include <cstdio>
 #include <thread>
+#include "../mc_utils.h"
 
 /**
    Use codec_ctx and data in p_packet to decode an audio frame and writes it in
@@ -15,7 +16,7 @@
 */
 int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t *audio_buf, int buf_size, AudioPlayer* aplayer)
 {
-  printf("in decode audio frame!\n");
+  eprintf("in decode audio frame!");
   AVFrame *p_frame = av_frame_alloc();
 
   int      frm_size   = 0;
@@ -30,14 +31,14 @@ int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t 
   while (1)
     {
       need_new = false;
-
+      eprintf("peek client p_codec_ctx %p,  channels: %d, fmt: %d, sample_rate: %d", p_codec_ctx, p_codec_ctx->channels, p_codec_ctx->sample_fmt, p_codec_ctx->sample_rate);
       // 1 接收解码器输出的数据，每次接收一个frame
       ret = avcodec_receive_frame(p_codec_ctx, p_frame);
       if (ret != 0)
         {
           if (ret == AVERROR_EOF)
             {
-              printf("audio avcodec_receive_frame(): the decoder has been fully flushed\n");
+              fprintf(stderr, "audio avcodec_receive_frame(): the decoder has been fully flushed\n");
               res = 0;
               goto exit;
             }
@@ -45,17 +46,18 @@ int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t 
             {
               //printf("audio avcodec_receive_frame(): output is not available in this state - "
               //       "user must try to send new input\n");
+              eprintf("need_new = true");
               need_new = true;
             }
           else if (ret == AVERROR(EINVAL))
             {
-              printf("audio avcodec_receive_frame(): codec not opened, or it is an encoder\n");
+              fprintf(stderr, "audio avcodec_receive_frame(): codec not opened, or it is an encoder\n");
               res = -1;
               goto exit;
             }
           else
             {
-              printf("audio avcodec_receive_frame(): legitimate decoding errors\n");
+              fprintf(stderr, "audio avcodec_receive_frame(): legitimate decoding errors\n");
               res = -1;
               goto exit;
             }
@@ -66,6 +68,7 @@ int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t 
           // 在main()函数中又有“s_audio_param_src  = s_audio_param_tgt”
           // 此处表示：如果frame中的音频参数      == s_audio_param_src == s_audio_param_tgt，那音频重采样的过程就免了(因此时s_audio_swr_ctx是NULL)
           // 　　　　　否则使用frame(源)和s_audio_param_src(目标)中的音频参数来设置s_audio_swr_ctx，并使用frame中的音频参数来赋值s_audio_param_src
+          eprintf("in else");
           if (p_frame->format                     != aplayer->s_audio_param_src.fmt            ||
               p_frame->channel_layout             != aplayer->s_audio_param_src.channel_layout ||
               p_frame->sample_rate                != aplayer->s_audio_param_src.freq)
@@ -83,7 +86,7 @@ int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t 
                                                                  NULL);
               if (aplayer->s_audio_swr_ctx == NULL || swr_init(aplayer->s_audio_swr_ctx) < 0)
                 {
-                  printf("Cannot create sample rate converter for conversion of %d Hz %s %d channels to %d Hz %s %d channels!\n",
+                  fprintf(stderr, "Cannot create sample rate converter for conversion of %d Hz %s %d channels to %d Hz %s %d channels!\n",
                          p_frame->sample_rate, av_get_sample_fmt_name(p_frame->format), p_frame->channels,
                          aplayer->s_audio_param_tgt.freq, av_get_sample_fmt_name(aplayer->s_audio_param_tgt.fmt), aplayer->s_audio_param_tgt.channels);
                   swr_free(&(aplayer->s_audio_swr_ctx));
@@ -99,7 +102,7 @@ int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t 
 
           if (aplayer->s_audio_swr_ctx != NULL)        // 重采样
             {
-              printf("in resample\n");
+              eprintf("in resample\n");
               // 重采样输入参数1：输入音频样本数是p_frame->nb_samples
               // 重采样输入参数2：输入音频缓冲区
               const uint8_t **in        = (const uint8_t **)p_frame->extended_data;
@@ -112,7 +115,7 @@ int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t 
               int out_size  = av_samples_get_buffer_size(NULL, aplayer->s_audio_param_tgt.channels, out_count, aplayer->s_audio_param_tgt.fmt, 0);
               if (out_size < 0)
                 {
-                  printf("av_samples_get_buffer_size() failed\n");
+                  fprintf(stderr, "av_samples_get_buffer_size() failed\n");
                   return -1;
                 }
 
@@ -128,12 +131,12 @@ int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t 
               // 音频重采样：返回值是重采样后得到的音频数据中单个声道的样本数
               nb_samples = swr_convert(aplayer->s_audio_swr_ctx, out, out_count, in, p_frame->nb_samples);
               if (nb_samples < 0) {
-                printf("swr_convert() failed\n");
+                fprintf(stderr, "swr_convert() failed\n");
                 return -1;
               }
               if (nb_samples == out_count)
                 {
-                  printf("audio buffer is probably too small\n");
+                  eprintf("audio buffer is probably too small\n");
                   if (swr_init(aplayer->s_audio_swr_ctx) < 0)
                     swr_free(&(aplayer->s_audio_swr_ctx));
                 }
@@ -152,7 +155,7 @@ int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t 
                                                     p_codec_ctx->sample_fmt,
                                                     1);
 
-              printf("frame size %d, buffer size %d\n", frm_size, buf_size);
+              eprintf("frame size %d, buffer size %d\n", frm_size, buf_size);
               assert(frm_size <= buf_size);
 
               p_cp_buf = p_frame->data[0];
@@ -169,11 +172,12 @@ int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t 
       // 2 向解码器喂数据，每次喂一个packet
       if (need_new)
         {
-          printf("in need new!");
+          eprintf("in need new!");
+          eprintf("peek packet: pts: %ld, stream_index: %d, size: %d", p_packet->pts, p_packet->stream_index, p_packet->size);
           ret      = avcodec_send_packet(p_codec_ctx, p_packet);
           if (ret != 0)
             {
-              printf("avcodec_send_packet() failed %d\n", ret);
+              fprintf(stderr, "avcodec_send_packet() failed %d\n", ret);
               res = -1;
               goto exit;
             }
@@ -187,14 +191,13 @@ int audio_decode_frame(AVCodecContext *p_codec_ctx, AVPacket *p_packet, uint8_t 
 
 // 音频处理回调函数。读队列获取音频包，解码，播放
 // 此函数被SDL按需调用，此函数不在用户主线程中，因此数据需要保护
-// \param[in]  userdata用户在注册回调函数时指定的参数
+// \param[in]  userdata 用户在注册回调函数时指定的参数
 // \param[out] stream 音频数据缓冲区地址，将解码后的音频数据填入此缓冲区
 // \param[out] len    音频数据缓冲区大小，单位字节
 // 回调函数返回后，stream指向的音频缓冲区将变为无效
 // 双声道采样点的顺序为LRLRLR
 void sdl_audio_callback(void *userdata, uint8_t *stream, int len)
 {
-
   AudioPlayer* aplayer        = (AudioPlayer *)userdata;
   AVCodecContext *p_codec_ctx = aplayer->p_codec_ctx;
   int copy_len;           //
@@ -223,7 +226,7 @@ void sdl_audio_callback(void *userdata, uint8_t *stream, int len)
 
       p_packet = (AVPacket *)av_malloc(sizeof(AVPacket));
 
-      fprintf(stderr, "before poping");
+      eprintf("before poping");
       // 1. 从队列中读出一包音频数据
       if (packet_queue_pop(&(aplayer->s_audio_pkt_queue), p_packet, 1) == 0) {
         fprintf(stderr, "audio packet buffer empty...\n");
@@ -233,6 +236,7 @@ void sdl_audio_callback(void *userdata, uint8_t *stream, int len)
       // 2. 解码音频包
       get_size = audio_decode_frame(p_codec_ctx, p_packet, s_audio_buf,
                                     sizeof(s_audio_buf), aplayer);
+      eprintf("after decoding audio packets: get_size: %d", get_size);
       if (get_size < 0) {
         // 出错输出一段静音
         s_audio_len = 1024; // arbitrary?
@@ -310,6 +314,10 @@ void read_data_from_jitter(Decoder *decoder) {
               decoder->pBlock->stream_id, decoder->pBlock->block_id,
               decoder->pPacket->size, (int)(current_mtime() - decoder->pBlock->block_ts));
 
+      eprintf("peek in read_data_from_jitter:");
+      eprintf("decoder->pPacket : pts: %ld, stream_index: %d, size: %d",
+              decoder->pPacket->pts, decoder->pPacket->stream_index,
+              decoder->pPacket->size);
 
       if(decoder->aplayer) {
         fprintf(stderr, "pushing\n");
@@ -351,16 +359,16 @@ void read_data_from_jitter(Decoder *decoder) {
 
 int open_audio_stream(CodecParWithoutExtraData *myCodecPar,
                       AudioPlayer *aplayer) {
-  // assert(aplayer->p_codec == NULL);
+  assert(aplayer->p_codec == NULL && aplayer->p_codec_ctx);
 
-  AVCodecContext *p_codec_ctx = aplayer->p_codec_ctx;
   SDL_AudioSpec wanted_spec;
   SDL_AudioSpec actual_spec;
   int ret;
 
   // 1. Prepare the decoder
   // 1.1 Read codec params from the block
-  int ret2 = lhs_copy_parameters_to_context(aplayer->p_codec_ctx, myCodecPar);
+  int ret2 =
+    lhs_copy_parameters_to_context(aplayer->p_codec_ctx, myCodecPar);
   if (ret2 < 0) {
     Print2File("avcodec_parameters_to_context():" + std::to_string(ret2));
   }
@@ -387,9 +395,9 @@ int open_audio_stream(CodecParWithoutExtraData *myCodecPar,
   //    a. push，SDL以特定的频率调用回调函数，在回调函数中取得音频数据
   //    b. pull，用户程序以特定的频率调用SDL_QueueAudio()，向音频设备提供数据。此种情况wanted_spec.callback=NULL
   // 2) 音频设备打开后播放静音，不启动回调，调用SDL_PauseAudio(0)后启动回调，开始正常播放音频
-  wanted_spec.freq = p_codec_ctx->sample_rate;    // 采样率
+  wanted_spec.freq = aplayer->p_codec_ctx->sample_rate;    // 采样率
   wanted_spec.format = AUDIO_S16SYS;              // S表带符号，16是采样深度，SYS表采用系统字节序
-  wanted_spec.channels = p_codec_ctx->channels;   // 声音通道数
+  wanted_spec.channels = aplayer->p_codec_ctx->channels;   // 声音通道数
   wanted_spec.silence = 0;                        // 静音值
   wanted_spec.samples = SDL_AUDIO_BUFFER_SIZE;    // SDL声音缓冲区尺寸，单位是单声道采样点尺寸x通道数
   wanted_spec.callback = sdl_audio_callback;      // 回调函数，若为NULL，则应使用SDL_QueueAudio()机制
@@ -407,7 +415,7 @@ int open_audio_stream(CodecParWithoutExtraData *myCodecPar,
   // 然后送再写入SDL音频缓冲区
   aplayer->s_audio_param_tgt.fmt = AV_SAMPLE_FMT_S16;
   aplayer->s_audio_param_tgt.freq = actual_spec.freq;
-  aplayer->s_audio_param_tgt.channel_layout = av_get_default_channel_layout(actual_spec.channels);;
+  aplayer->s_audio_param_tgt.channel_layout = av_get_default_channel_layout(actual_spec.channels);
   aplayer->s_audio_param_tgt.channels =  actual_spec.channels;
   aplayer->s_audio_param_tgt.frame_size = av_samples_get_buffer_size(NULL, actual_spec.channels, 1, aplayer->s_audio_param_tgt.fmt, 1);
   aplayer->s_audio_param_tgt.bytes_per_sec = av_samples_get_buffer_size(NULL, actual_spec.channels, actual_spec.freq, aplayer->s_audio_param_tgt.fmt, 1);
