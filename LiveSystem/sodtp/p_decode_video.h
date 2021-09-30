@@ -911,7 +911,7 @@ int video_viewer4(SodtpJitterPtr pJitter, SDLPlay *splay, const char *path) {
         ret = pJitter->front(pBlock);
 
         if ((ret == SodtpJitter::STATE_NORMAL) && pBlock->key_block) {
-            fprintf(stdout, "sniffing: stream %d,\t block %d,\t size %d\n",
+            fprintf(stderr, "sniffing: stream %d,\t block %d,\t size %d\n",
                     pBlock->stream_id, pBlock->block_id, pBlock->size);
 
             // Print2File("==========================改的接口==========================");
@@ -977,7 +977,7 @@ int video_viewer4(SodtpJitterPtr pJitter, SDLPlay *splay, const char *path) {
     pVCodec = avcodec_find_decoder(pVCodecCtx->codec_id);
     if (!pVCodec) {
         Print2File("Codec not found");
-        fprintf(stderr, "Codec not found\n");
+        fprintf(stderr, "[ERROR] Codec not found, codec_id = %d\n", pVCodecCtx->codec_id);
         return -1;
     }
     // Print2File("if (avcodec_open2(pVCodecCtx, pVCodec, NULL) < 0) {");

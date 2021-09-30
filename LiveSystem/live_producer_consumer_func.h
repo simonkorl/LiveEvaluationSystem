@@ -258,7 +258,7 @@ bool liveConsumeThread(LiveCapture *lc,
 
                 // write a vec pointer of packet ptrs into the buffer, and get a stale vec pointer.
                 // 特别注意 block_id 多流改位置！
-                block_id += 2;
+                block_id += 1;
                 pStmPktVec = pBuffer->produce(pStmPktVec);
                 pStmPktVec = NULL;
                 if (vStmCtx->empty()) {

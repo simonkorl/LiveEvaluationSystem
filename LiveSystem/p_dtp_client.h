@@ -115,7 +115,7 @@ static void flush_egress(struct ev_loop *loop, CONN_IO *conn_io) {
 
     double t = quiche_conn_timeout_as_nanos(conn_io->conn) / 1e9f;
     if(t < 0.00000001) {
-      t = 0.001;
+      t = 0.000001;
     }
     conn_io->timer.repeat = t;
     ev_timer_again(loop, &conn_io->timer);
