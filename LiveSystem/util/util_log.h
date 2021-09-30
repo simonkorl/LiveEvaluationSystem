@@ -24,7 +24,7 @@ extern "C"
 
 #include <stdarg.h>
 #include <sys/stat.h>
-#include <sodtp_config.h>
+#include "../sodtp/sodtp_config.h"
 
 #define msleep(n) usleep(n*1000)
 #define LOG_TPYE_TXT ".txt"
@@ -134,26 +134,6 @@ static std::wstring IntToWstring(unsigned int i)
 	std::wstringstream ss;
 	ss << i;
 	return ss.str();
-}
-static int lhs_write_packet(void *opaque, uint8_t *buf, int buf_size)
-{
-	struct buffer_data_write *bd = (struct buffer_data_write *)opaque;
-	while (buf_size > bd->room) {
-		int64_t offset = bd->ptr - bd->buf;
-		// uint8_t *bufferPtr = static_cast<uint8_t *>(malloc( sizeof(uint8_t)))
-		void* tmpPtr = av_realloc_f(bd->buf, 2, bd->size);
-		bd->buf = static_cast<uint8_t *>(malloc( sizeof(tmpPtr)));
-		if (!bd->buf)
-			return AVERROR(ENOMEM);
-		bd->size *= 2;
-		bd->ptr = bd->buf + offset;
-		bd->room = bd->size - offset;
-	}
-	/* copy buffer data to buffer_data buffer */
-	memcpy(bd->ptr, buf, buf_size);
-	bd->ptr  += buf_size;
-	bd->room -= buf_size;
-	return buf_size;
 }
 
 //微秒

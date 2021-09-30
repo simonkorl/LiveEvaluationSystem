@@ -1,7 +1,6 @@
 #ifndef UTIL_MEDIAENCODER_H
 #define UTIL_MEDIAENCODER_H
 #pragma once
-#include <live_xData.h>
 
 extern "C"
 {
@@ -10,6 +9,8 @@ extern "C"
 #include <libavformat/avformat.h>
 #include <libswresample/swresample.h>
 }
+
+#include "../live_xData.h"
 
 class  AVCodecContext;
 enum XSampleFMT
@@ -60,7 +61,7 @@ public:
 	//工厂的生产方法
 	// static XMediaEncode *Get(unsigned char index = 0);
 	//返回值无需调用者清理
-	XData RGBToYUV(XData d)
+	XData RGBToYUV(XData d) const
 	{
 		XData r;
 		r.pts = d.pts;
@@ -132,44 +133,44 @@ public:
 	//音频重采样上下文初始化(暂时注释掉)
 	bool InitResample()
 	{
-		// //2 音频重采样 上下文初始化
-		// asc = NULL;
-		// asc = swr_alloc_set_opts(asc,
-		// 	av_get_default_channel_layout(channels), (AVSampleFormat)outSampleFmt, sampleRate,//输出格式
-		// 	av_get_default_channel_layout(channels), (AVSampleFormat)inSampleFmt, sampleRate, 0, 0//输入格式
-		// );
-		// if (!asc) {
-		// 	Print2File("swr_alloc_set_opts failed!");
-		// 	return false;
-		// }
-		// int ret = swr_init(asc);
-		// if (ret != 0) {
-		// 	char err[1024] = { 0 };
-		// 	av_strerror(ret, err, sizeof(err) - 1);
-		// 	Print2File("err");
-		// 	return false;
-		// }
+		//2 音频重采样 上下文初始化
+		asc = NULL;
+		asc = swr_alloc_set_opts(asc,
+			av_get_default_channel_layout(channels), (AVSampleFormat)outSampleFmt, sampleRate,//输出格式
+			av_get_default_channel_layout(channels), (AVSampleFormat)inSampleFmt, sampleRate, 0, 0//输入格式
+		);
+		if (!asc) {
+			Print2File("swr_alloc_set_opts failed!");
+			return false;
+		}
+		int ret = swr_init(asc);
+		if (ret != 0) {
+			char err[1024] = { 0 };
+			av_strerror(ret, err, sizeof(err) - 1);
+			Print2File("err");
+			return false;
+		}
 
-		// // cout << "音频重采样 上下文初始化 success" << endl;
+    std::cout << "音频重采样 上下文初始化 success" << std::endl;
 
-		// ///3 音频重采样输出空间分配
-		// pcm = av_frame_alloc();
-		// pcm->format = outSampleFmt;
-		// pcm->channels = channels;
-		// pcm->channel_layout = av_get_default_channel_layout(channels);
-		// pcm->nb_samples = nbSample;//一帧音频一通道的采样数量
-		// ret = av_frame_get_buffer(pcm, 0);//给pcm分配内存空间
-		// if (ret != 0) {
-		// 	char err[1024] = { 0 };
-		// 	av_strerror(ret, err, sizeof(err) - 1);
-		// 	Print2File("err");
-		// 	return false;
-		// }
+		///3 音频重采样输出空间分配
+		pcm = av_frame_alloc();
+		pcm->format = outSampleFmt;
+		pcm->channels = channels;
+		pcm->channel_layout = av_get_default_channel_layout(channels);
+		pcm->nb_samples = nbSample;//一帧音频一通道的采样数量
+		ret = av_frame_get_buffer(pcm, 0);//给pcm分配内存空间
+		if (ret != 0) {
+			char err[1024] = { 0 };
+			av_strerror(ret, err, sizeof(err) - 1);
+			Print2File("err");
+			return false;
+		}
 		return true;
 	}
 
 	//返回值无需调用者清理
-	XData Resample(XData d)
+	XData Resample(XData d) const
 	{
 		XData r;
 		//已经读一帧源数据
@@ -268,7 +269,7 @@ public:
 	//音频编码 返回值无需用户清理
 	XData EncodeAudio(XData frame)
 	{
-		Print2File("EncodeAudio");
+		// Print2File("EncodeAudio");
 		XData r;
 		if (frame.size <= 0 || !frame.data)
 		{

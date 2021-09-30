@@ -115,7 +115,7 @@ static void flush_egress(struct ev_loop *loop, CONN_IO *conn_io) {
 
     double t = quiche_conn_timeout_as_nanos(conn_io->conn) / 1e9f;
     if(t < 0.00000001) {
-      t = 0.001;
+      t = 0.000001;
     }
     conn_io->timer.repeat = t;
     ev_timer_again(loop, &conn_io->timer);
@@ -191,7 +191,8 @@ static void recv_cb(EV_P_ ev_io *w, int revents) {
 
         fprintf(stderr, "sent HTTP request\n");
 
-        req_sent = true;
+        req_sent = true
+;
     }
 
 
@@ -246,17 +247,26 @@ static void recv_cb(EV_P_ ev_io *w, int revents) {
                 // Print2File("SodtpBlockPtr BlockDataBuffer::read(uint32_t id, SodtpStreamHeader *head) {");
                 SodtpBlockPtr bk_ptr = bk_buf.read(s, &header);
                 if (bk_ptr) {
-                    fprintf(stderr, "block ts %lld\n", header.block_ts);
+                    fprintf(stderr, "block ts %ld\n", header.block_ts);
                     fprintf(stderr, "recv round %d,\t stream %d,\t block %d,\t size %d,\t delay %d\n",
                         conn_io->recv_round, header.stream_id,
                         bk_ptr->block_id, bk_ptr->size,
                         (int)(current_mtime() - header.block_ts));
-                        // Print2File("conn_io->jitter->push_back(&header, bk_ptr)");
+                    // Print2File("conn_io->jitter->push_back(&header, bk_ptr)");
                     // Print2File("conn_io->jitter->push_back(&header, bk_ptr); 真正");
+                    // if(bk_ptr->stream_id == 1) {
+                    //   // if it is an audio stream
+                    //   // drop it now
+                    //   timeFramePlayer.evalTimeStamp("pJitter_Push","p",std::to_string(bk_ptr->block_id));
+                    //   // conn_io->jitter->push_back(&header, bk_ptr);
+                    //   conn_io->recv_round++;
+                    //   continue;
+                    // } else {
+                      // deal with video stream block
                     timeFramePlayer.evalTimeStamp("pJitter_Push","p",std::to_string(bk_ptr->block_id));
                     conn_io->jitter->push_back(&header, bk_ptr);
                     conn_io->recv_round++;
-                    
+                    // }
                 }
             }
 

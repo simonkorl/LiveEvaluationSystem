@@ -80,6 +80,7 @@ cl_udp:
 
 rb:
 	rm -rf $(TARGETS)
+	rm -rf *.so
 	make cl_all
 	make all
 
@@ -101,6 +102,8 @@ ru: r_udp_server r_udp_play libsodtp.so
 # rq:
 # 	Open ../command/lhs_quiche_startBoth.command
 
+limit:
+	sudo python3 traffic_control.py -load tc.txt > tc.log 2>&1
 k:
 	../command/lhs_killBoth.sh
 
