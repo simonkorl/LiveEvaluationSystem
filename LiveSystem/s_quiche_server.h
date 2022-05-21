@@ -369,8 +369,8 @@ static void sender_cb(EV_P_ ev_timer *w, int revents) {
                 memcpy(buf + sizeof(item->header), item->codecParExtradata, extradataSize);
                 memcpy(buf + sizeof(item->header) + extradataSize, item->packet.data, item->packet.size);
 
-                if (quiche_conn_stream_send(conn_io->conn, quiche_sid, buf,
-                            sizeof(item->header) + item->packet.size, true) < 0) {
+                if (quiche_conn_stream_send(conn_io->conn, 1, buf,
+                            sizeof(item->header) + item->packet.size, false) < 0) {
                     fprintf(stdout, "failed round %d,\t stream %d,\t block %d,\t size %d\n",
                             conn_io->send_round, item->header.stream_id,
                             item->header.block_id, item->packet.size);

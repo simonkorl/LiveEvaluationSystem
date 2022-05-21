@@ -73,6 +73,10 @@ libquiche.so:
 	cd ../submodule/quiche && cargo build --release
 	cp -f ../submodule/quiche/target/release/libquiche.so ./libquiche.so
 
+main:
+	g++ main.cpp loopbuf.cpp -o a.out
+	./a.out
+
 clean:
 	rm -rf $(TARGETS)
 
